@@ -30,7 +30,7 @@ function leafFiles(files: FileData[]): string[] {
         const fileId = file.id;
         const fileName = file.name;
 
-        if (!Object.hasOwn(isParent, fileId)) {
+        if (!isParent.hasOwnProperty(fileId)) {
             leafFileNames.push(fileName);
         }
     }
@@ -42,7 +42,38 @@ function leafFiles(files: FileData[]): string[] {
  * Task 2
  */
 function kLargestCategories(files: FileData[], k: number): string[] {
-    return [];
+    let categoriesCount: Record<string, number> = {};
+
+    for (const file of files) {
+        const fileCategories = file.categories;
+        for (const category of fileCategories) {
+            if (!categoriesCount.hasOwnProperty(category)) {
+                categoriesCount[category] = 0;
+            } 
+            categoriesCount[category] += 1;
+        }
+    }
+
+    console.log(categoriesCount);
+
+    let categoriesCountArray = []
+    for (const keyValueArray of Object.entries(categoriesCount)) {
+        categoriesCountArray.push(keyValueArray);
+    }
+
+    categoriesCountArray.sort((cat1, cat2) => {
+        if (cat1[1] != cat2[1]) {
+            return cat2[1] - cat1[1];
+        } else {
+            return cat1[0].localeCompare(cat2[0]);
+        }
+    })
+
+    const kLargestCategoriesArray = categoriesCountArray.filter((categCountPair, index) => index < k).map(categCountPair => categCountPair[0]);
+
+    console.log(kLargestCategories);
+    
+    return kLargestCategoriesArray;
 }
 
 /**
@@ -95,9 +126,9 @@ console.assert(arraysEqual(
     ]
 ));
 
-// console.assert(arraysEqual(
-//     kLargestCategories(testFiles, 3),
-//     ["Documents", "Folder", "Media"]
-// ));
+console.assert(arraysEqual(
+    kLargestCategories(testFiles, 3),
+    ["Documents", "Folder", "Media"]
+));
 
 // console.assert(largestFileSize(testFiles) == 20992)

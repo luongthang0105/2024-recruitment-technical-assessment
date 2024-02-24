@@ -3,7 +3,7 @@ type FileData = {
     id: number,
     name: string,
     categories: string[],
-    parent: number
+    parent: number,
     size: number
 };
 
@@ -71,7 +71,7 @@ function kLargestCategories(files: FileData[], k: number): string[] {
 
     const kLargestCategoriesArray = categoriesCountArray.filter((categCountPair, index) => index < k).map(categCountPair => categCountPair[0]);
 
-    console.log(kLargestCategories);
+    console.log(kLargestCategoriesArray);
     
     return kLargestCategoriesArray;
 }
@@ -80,7 +80,34 @@ function kLargestCategories(files: FileData[], k: number): string[] {
  * Task 3
  */
 function largestFileSize(files: FileData[]): number {
-    return 1;
+    let rootFileSizes: Record<string, number> = {};
+
+    for (const file of files) {
+        const fileSize = file.size;
+        let rootFile = file;
+        
+        while (rootFile.parent != -1) {
+            const parentFile = files.find((file) => file.id === rootFile.parent);
+            // Safely deal with undefined check
+            if (parentFile) {
+                rootFile = parentFile;
+            }
+        }
+        
+        const rootFileName = rootFile.name;
+        if (!rootFileSizes.hasOwnProperty(rootFileName)) {
+            rootFileSizes[rootFileName] = 0;
+        }
+        rootFileSizes[rootFileName] += fileSize;
+    }
+
+    let maxFileSize = -1;
+    for (const fileSize of Object.values(rootFileSizes)) {
+        maxFileSize = Math.max(maxFileSize, fileSize);
+    }
+
+    console.log(maxFileSize);
+    return maxFileSize;
 }
 
 
@@ -131,4 +158,4 @@ console.assert(arraysEqual(
     ["Documents", "Folder", "Media"]
 ));
 
-// console.assert(largestFileSize(testFiles) == 20992)
+console.assert(largestFileSize(testFiles) == 20992)

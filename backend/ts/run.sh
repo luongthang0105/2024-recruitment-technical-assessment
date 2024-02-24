@@ -1,1 +1,1 @@
-tsc task.ts && node task.js
+tsc --project tsconfig.json && node task.js

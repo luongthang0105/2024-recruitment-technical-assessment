@@ -42,8 +42,9 @@ function leafFiles(files: FileData[]): string[] {
  * Task 2
  */
 function kLargestCategories(files: FileData[], k: number): string[] {
+    // Create an object to record the number of files in each category
     let categoriesCount: Record<string, number> = {};
-
+    
     for (const file of files) {
         const fileCategories = file.categories;
         for (const category of fileCategories) {
@@ -54,53 +55,72 @@ function kLargestCategories(files: FileData[], k: number): string[] {
         }
     }
 
-    console.log(categoriesCount);
-
+    
+    // Since we can't sort object, we can instead append the key-value into an array so we can sort them.
+    // An element of this new array is an array that has the form [categoryName, count].
     let categoriesCountArray = []
     for (const keyValueArray of Object.entries(categoriesCount)) {
         categoriesCountArray.push(keyValueArray);
     }
 
-    categoriesCountArray.sort((cat1, cat2) => {
-        if (cat1[1] != cat2[1]) {
-            return cat2[1] - cat1[1];
+    // Sort the array in descending order by their count, then in alphabetical order by their category name.
+    categoriesCountArray.sort((a, b) => {
+        if (a[1] != b[1]) {
+            return b[1] - a[1];
         } else {
-            return cat1[0].localeCompare(cat2[0]);
+            return a[0].localeCompare(b[0]);
         }
     })
-
+    
+    // To get the top K categories, we filter out the categories whose index is less than K.
+    // This would meet the requirements where there are less than K categories in the list.
     const kLargestCategoriesArray = categoriesCountArray.filter((categCountPair, index) => index < k).map(categCountPair => categCountPair[0]);
 
-    console.log(kLargestCategoriesArray);
-    
+    // console.log(categoriesCountArray);
     return kLargestCategoriesArray;
 }
 
 /**
  * Task 3
  */
+// The overall flow would be create an object (rootFileSizes) to record the file sizes, including their children and grandchildren.
+// To fill rootFileSizes up, we can simply iterate through every file, find their very top father (the root), and add their file sizes to the 
+// record of the root file. This is because we know that the biggest file will always be the root file, hence we only need to add sizes to the root.
+// After processing every file, we simply find the largest file size within rootFileSizes.
 function largestFileSize(files: FileData[]): number {
+    // Create an object to record the file sizes.
     let rootFileSizes: Record<string, number> = {};
 
     for (const file of files) {
         const fileSize = file.size;
         let rootFile = file;
-        
+
+        // Traverse backwards by using the parent id until get to root.
         while (rootFile.parent != -1) {
+            // Find the parent file within files[] by id.
             const parentFile = files.find((file) => file.id === rootFile.parent);
-            // Safely deal with undefined check
+
+            // Safely deal with undefined check 
+            // (linting won't let me directly assign the results to rootFile because .find() might return undefined, 
+            // even tho we assume that the parent file always exist if it's ID is not -1)
             if (parentFile) {
                 rootFile = parentFile;
+            } else {
+                // If we can't find a file with the current id then probably files() is not correct.
+                return -1;
             }
         }
         
         const rootFileName = rootFile.name;
+        // If root file hasn't been added to rootFileSizes, initalize it with value 0.
         if (!rootFileSizes.hasOwnProperty(rootFileName)) {
             rootFileSizes[rootFileName] = 0;
         }
+        // Add file size of the file itself (in case itself is a root), its child or its grandchild to the root file.
         rootFileSizes[rootFileName] += fileSize;
     }
 
+    // Extract the maximum file size from rootFileSizes.
     let maxFileSize = -1;
     for (const fileSize of Object.values(rootFileSizes)) {
         maxFileSize = Math.max(maxFileSize, fileSize);
@@ -137,25 +157,106 @@ const testFiles: FileData[] = [
     { id: 233, name: "Folder3", categories: ["Folder"], parent: -1, size: 4096 },
 ];
 
-console.log(1);
-console.assert(arraysEqual(
-    leafFiles(testFiles).sort((a, b) => a.localeCompare(b)),
-    [
-        "Audio.mp3",
-        "Backup.zip",
-        "Code.py",
-        "Document.txt",
-        "Image.jpg",
-        "Presentation.pptx",
-        "Spreadsheet.xlsx",
-        "Spreadsheet2.xlsx",
-        "Video.mp4"
-    ]
-));
+const testFile_1: FileData[] = [
+    { id: 1, name: "Document", categories: ["Documents"], parent: -1, size: 1024 },
+    { id: 2, name: "Image", categories: ["Media", "Photos"], parent: -1, size: 2048 },
+    { id: 3, name: "Folder", categories: ["Folder"], parent: -1, size: 0 },
+]
 
-console.assert(arraysEqual(
-    kLargestCategories(testFiles, 3),
-    ["Documents", "Folder", "Media"]
-));
+const testFile_ZeroSizes: FileData[] = [
+    { id: 1, name: "Document", categories: ["Documents"], parent: -1, size: 0 },
+    { id: 2, name: "Image", categories: ["Media", "Photos"], parent: -1, size: 0 },
+    { id: 3, name: "Folder", categories: ["Folder"], parent: -1, size: 0 },
+]
 
-console.assert(largestFileSize(testFiles) == 20992)
+const testFile_2: FileData[] = [
+    { id: 1, name: "Document", categories: ["Documents"], parent: -1, size: 10 },
+    { id: 2, name: "Image", categories: ["Media", "Photos"], parent: -1, size: 5 },
+    { id: 3, name: "Folder", categories: ["Folder"], parent: -1, size: 0 },
+    { id: 4, name: "Ahihi", categories: ["Documents"], parent: 2, size: 6 },
+]
+
+const testFile_3: FileData[] = [
+    { id: 1, name: "Document", categories: ["Documents"], parent: -1, size: 10 },
+    { id: 2, name: "Image", categories: ["Media", "Photos"], parent: -1, size: 5 },
+    { id: 3, name: "Folder", categories: ["Folder"], parent: -1, size: 12 },
+    { id: 4, name: "Doc", categories: ["Documents"], parent: 2, size: 6 },
+    { id: 5, name: "Doc2", categories: ["Documents"], parent: 4, size: 6 },
+    { id: 6, name: "Doc3", categories: ["Documents"], parent: 5, size: 6 },
+    // Largest file: Doc3->Doc2->Doc->Image = 6 * 3 + 5 = 23
+]
+
+
+function testTask1() {
+    console.log("Start testing Task 1 ");
+    console.assert(arraysEqual(
+        leafFiles(testFiles).sort((a, b) => a.localeCompare(b)),
+        [
+            "Audio.mp3",
+            "Backup.zip",
+            "Code.py",
+            "Document.txt",
+            "Image.jpg",
+            "Presentation.pptx",
+            "Spreadsheet.xlsx",
+            "Spreadsheet2.xlsx",
+            "Video.mp4"
+        ]
+    ));
+    console.assert(arraysEqual(
+        leafFiles(testFile_1).sort((a, b) => a.localeCompare(b)),
+        [
+            "Document",
+            "Image",
+            "Folder"
+        ].sort((a, b) => a.localeCompare(b))
+    ));
+    console.log("Passed testing Task 1! \n");
+}
+
+function testTask2() {
+    console.log("Start testing Task 2 ");
+
+    // Testing on TestFiles
+    console.assert(arraysEqual(
+        kLargestCategories(testFiles, 3),
+        ["Documents", "Folder", "Media"]
+    ));
+    
+    console.assert(arraysEqual(
+        kLargestCategories(testFiles, 10),
+        ["Documents", "Folder", "Media", "Excel", "Audio", "Backup", "Photos", "Presentation", "Programming", "Videos"]
+    ));
+    
+    console.assert(arraysEqual(
+        kLargestCategories(testFiles, 11),
+        ["Documents", "Folder", "Media", "Excel", "Audio", "Backup", "Photos", "Presentation", "Programming", "Videos"]
+    ));
+    
+    // Testing on TestFile_1
+    console.assert(arraysEqual(
+        kLargestCategories(testFile_1, 5),
+        ["Documents", "Folder", "Media", "Photos"]
+    ));
+
+    console.assert(arraysEqual(
+        kLargestCategories(testFile_1, 2),
+        ["Documents", "Folder"]
+    ));
+    console.log("Passed testing Task 2! \n ");
+
+}
+
+function testTask3() {
+    console.log("Start testing Task 3 ");
+    console.assert(largestFileSize(testFiles) === 20992);
+    console.assert(largestFileSize(testFile_1) === 2048);
+    console.assert(largestFileSize(testFile_ZeroSizes) === 0);
+    console.assert(largestFileSize(testFile_2) === 11);
+    console.assert(largestFileSize(testFile_3) === 23);
+    console.log("Passed testing Task 3! \n ");
+}
+
+testTask1();
+testTask2();
+testTask3();
